@@ -1,0 +1,20 @@
+**** module/scope: divider
+     Flip-Flops   : 20
+     Logic Gates  : 569
+     ADDER[4]: 2 units
+     ADDER[7]: 1 units
+     EQUALITY[32]: 7 units
+     MUX[2]: 44 slices
+     LPM[8]: 1 unaccounted
+     LOG[13]: 1 unaccounted
+     LOG[14]: 1 unaccounted
+**** TOTALS
+     Flip-Flops   : 20
+     Logic Gates  : 569
+     ADDER[4]: 2 units
+     ADDER[7]: 1 units
+     EQUALITY[32]: 7 units
+     MUX[2]: 44 slices
+     LPM[8]: 1 unaccounted
+     LOG[13]: 1 unaccounted
+     LOG[14]: 1 unaccounted
