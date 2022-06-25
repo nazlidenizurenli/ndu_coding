@@ -93,6 +93,7 @@ REGISTER_R #(.N(2), .INIT(STATE_C_IDLE)) state_c (
 
   // This register keeps track of writing vector a to sram_a
   wire [31:0] a_idx_val, a_idx_next;
+  wire [31:0] a_index, b_index;
   wire a_idx_ce, a_idx_rst;
   REGISTER_R_CE #(.N(32), .INIT(0)) a_idx (
     .q(a_idx_val),
@@ -115,7 +116,7 @@ REGISTER_R #(.N(2), .INIT(STATE_C_IDLE)) state_c (
   wire [31:0] c_a_idx_val, c_a_idx_next;
   wire c_a_idx_ce, c_a_idx_rst;
   REGISTER_R_CE #(.N(32), .INIT(0)) c_a_idx (
-    .q(c_a_idx_val), // Acaba direk +1 yapmak daha mi dogru
+    .q(c_a_idx_val), 
     .d(c_a_idx_next),
     .ce(c_a_idx_ce),
     .rst(c_a_idx_rst),
@@ -136,7 +137,7 @@ REGISTER_R #(.N(2), .INIT(STATE_C_IDLE)) state_c (
   REGISTER_R_CE #(.N(WIDTH), .INIT(0)) result (
     .q(result_val),
     .d(result_next),
-    .ce(state_c_val), // degisti
+    .ce(result_ce), // degisti
     .rst(result_rst),
     .clk(clk));
 
@@ -157,13 +158,16 @@ SRAM2RW32x16 sram_a_b(
     .CSB1(1'b0),
     .CSB2(1'b0),
 
-    .A1(a_idx_val),
-    .A2(b_idx_val),
+    .A1(a_index), //a_idx_val
+    .A2(b_index), //b_idx_val
     .I1(a_data),
     .I2(b_data),
     .O1(sram_a_rdata),
     .O2(sram_b_rdata)
 );
+
+assign a_index = !sram_a_write ? a_idx_val : c_a_idx_val;
+assign b_index = !sram_a_write ? b_idx_val : c_b_idx_val;
 
 // FSM for writing vector a 
   always @(*) begin
@@ -186,12 +190,15 @@ SRAM2RW32x16 sram_a_b(
     endcase
   end
 
-//   initial begin
-//     $monitor("state_a_val: %d state_b_val: %d state_c_val: %d a_idx_val: %d b_idx_val: %d c_a_idx_val: %d c_a_idx_next: %d c_a_idx_ce: %d c_b_idx_val: %d", state_a_val, state_b_val, state_c_val, a_idx_val, b_idx_val, c_a_idx_val, c_a_idx_next,c_a_idx_ce, c_b_idx_val);
-//   end
-  initial begin
-    $monitor("sram_a_rdata: %d sram_b_rdata: %d result_val: %d c_data: %d", sram_a_rdata, sram_b_rdata, result_val, c_data);
-  end
+  // initial begin
+  //   $monitor("state_a_val: %d state_b_val: %d a_fire: %d b_fire: %d c_a_idx_val: %d c_a_idx_ce: %d c_b_idx_ce: %d c_b_idx_val: %d", state_a_val, state_b_val, a_fire, b_fire, c_a_idx_val, c_a_idx_ce,c_b_idx_ce, c_b_idx_val);
+  // end
+  // initial begin
+  //   $monitor("sram_a_rdata: %d sram_b_rdata: %d result_val: %d c_data: %d", sram_a_rdata, sram_b_rdata, result_val, c_data);
+  // end
+ always @(posedge clk) begin
+  $display("clk: %d a_data: %d b_data: %d Result_ce: %d result_next: %d result_val: %d sram_a_rdata: %d sram_b_rdata: %d sram_a_write: %d sram_b_write: %d", clk, a_data, b_data, result_ce, result_next, result_val, sram_a_rdata, sram_b_rdata, sram_a_write, sram_b_write);
+ end
 
   // FSM for writing vector b 
   always @(*) begin
@@ -225,7 +232,7 @@ SRAM2RW32x16 sram_a_b(
         end
       end
       STATE_C_COMPUTE: begin
-        if (c_a_idx_val == 15)
+        if (c_a_idx_val == 15) // bunun 16 mi olmasi gerekiyor 
           state_c_next = STATE_C_DONE;
       end
       STATE_C_DONE: begin
@@ -241,7 +248,7 @@ SRAM2RW32x16 sram_a_b(
   assign b_ready = (state_b_val == STATE_B_IDLE || state_b_val == STATE_B_WRITE);
 
 
-  assign a_idx_ce   = a_fire && (a_idx_val < 15); //((a_fire && b_fire) || state_c_val) 
+  assign a_idx_ce   = (a_fire && a_idx_val < 15); //a_fire; && (a_idx_val < 15); //((a_fire && b_fire) || state_c_val) 
   assign a_idx_next = a_idx_val + 1; // bunlarin yonleri ters mi
   assign a_idx_rst  = (state_a_val == STATE_A_DONE) | rst;
 
@@ -258,6 +265,11 @@ SRAM2RW32x16 sram_a_b(
   assign c_b_idx_rst = state_c_val == STATE_C_DONE || rst;
   assign c_b_idx_next = c_b_idx_val + 1;
 
+  //always @(posedge clk) begin
+   //$display("a_idx_ce: %d b_idx_ce: %d c_a_idx_ce: %d c_b_idx_ce: %d c_a_idx_next: %d c_a_idx_val: %d c_b_idx_next: %d c_b_idx_val: %d", a_idx_ce, b_idx_ce, c_a_idx_ce, c_b_idx_ce, c_a_idx_next, c_a_idx_val, c_b_idx_next, c_b_idx_val);
+  //  $display("sram_a_b.A1: %d sram_a_b.A2: %d sram_a_b.O1: %d sram_a_b.O2: %d", sram_a_b.A1, sram_a_b.A2, sram_a_b.O1, sram_a_b.O2);
+  // end
+
   // Delay state_c by one cycle since reading from SRAM takes one cycle
   wire [1:0] state_c_delay_val;
   REGISTER #(.N(2)) state_c_delay (.q(state_c_delay_val), .d(state_c_val), .clk(clk));
@@ -265,7 +277,7 @@ SRAM2RW32x16 sram_a_b(
 
   // Dot product computation
   assign result_next = result_val + sram_a_rdata * sram_b_rdata;
-  //assign result_ce   = (state_c_delay_val == STATE_C_COMPUTE);
+  assign result_ce   = (state_c_delay_val == STATE_C_COMPUTE);
   assign result_rst  = (state_c_delay_val == STATE_C_IDLE);
 
   assign c_data  = result_val;

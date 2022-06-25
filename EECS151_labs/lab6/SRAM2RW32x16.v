@@ -106,6 +106,11 @@ always @ (data_out1 or OEB1_i)
 	else
 		O1_i =  1'bz;
 
+always @(*) begin
+	$display("outputs %d %d", data_out1, data_out2);
+end
+
+
 //Dual ports	
 always @ (posedge CE2_i)
   	if (RE2)
